@@ -11,7 +11,7 @@ authors = [
 description = "Generate 3D (STL) files from cube definitions."
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.7" # Specify minimum Python version
+requires-python = ">=3.8" # Specify minimum Python version
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
