@@ -106,13 +106,13 @@ model6 = cubeforge.VoxelModel(voxel_dimensions=voxel_dim)
 
 for x in range(grid_size_x):
     for z in range(grid_size_z):
-        total_height = min_height + random.randint(0, max_additional_height)
-        for y in range(total_height):
-            # Add voxel using corner anchor. Coordinates are direct due to 1x1x1 dimension.
-            model6.add_voxel(x * voxel_dim[0],
-                             y * voxel_dim[1],
-                             z * voxel_dim[2],
-                             anchor=cubeforge.CubeAnchor.CORNER_NEG)
+        total_height = min_height + random.random() * max_additional_height
+        # Add voxel using corner anchor. Coordinates are direct due to 1x1x1 dimension.
+        model6.add_voxel(x * voxel_dim[0],
+                         0,
+                         z * voxel_dim[2],
+                         dimensions=(voxel_dim[0], total_height, voxel_dim[2]),
+                         anchor=cubeforge.CubeAnchor.CORNER_NEG)
 
 output_filename6 = os.path.join(output_dir, "random_height_surface.stl") # Use output_dir
 model6.save_mesh(output_filename6, format='stl_binary', solid_name="RandomHeightSurface")

@@ -8,7 +8,7 @@
 ## Features
 
 - [x] **Voxel-based Modeling:** Define 3D shapes by adding individual voxels (cubes).
-- [x] **Non-Uniform Voxel Dimensions:** Specify custom width, height, and depth for voxels.
+- [x] **Non-Uniform Voxel Dimensions:** Specify default non-uniform dimensions for a model, and override dimensions on a per-voxel basis.
 - [x] **Flexible Anchoring:** Position voxels using different anchor points ([`cubeforge.CubeAnchor`](cubeforge/constants.py)) like corners or centers.
 - [x] **STL Export:** Save the generated mesh to both ASCII and Binary STL file formats.
 - [x] **Simple API:** Easy-to-use interface with the core [`cubeforge.VoxelModel`](cubeforge/model.py) class.
@@ -23,7 +23,7 @@ pip install cubeforge
 ```
 
 **Install from source:**
-You can also clone the repository and install the package using pip:
+You can also clone the repository and install the package using `pip`:
 
 ```bash
 pip install .
@@ -48,10 +48,12 @@ model.add_voxel(1, 1, 0)
 # --- Or add multiple voxels at once ---
 # model.add_voxels([(0, 0, 0), (1, 0, 0), (1, 1, 0)])
 
-# --- Example with non-uniform dimensions and different anchor ---
-model_non_uniform = cubeforge.VoxelModel(voxel_dimensions=(2.0, 1.0, 3.0))
-# Add a voxel centered at (0, 0, 0)
-model_non_uniform.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CENTER)
+# --- Example with custom dimensions per voxel ---
+tower_model = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
+# Add a 1x1x1 base cube centered at (0,0,0)
+tower_model.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CENTER)
+# Stack a wide, flat 3x0.5x3 cube on top of it
+tower_model.add_voxel(0, 0.5, 0, anchor=cubeforge.CubeAnchor.BOTTOM_CENTER, dimensions=(3.0, 0.5, 3.0))
 
 # Define output path
 output_dir = "output"
@@ -68,7 +70,8 @@ print(f"Saved mesh to {output_filename}")
 
 The [`examples/create_shapes.py`](examples/create_shapes.py ) script demonstrates various features, including:
 *   Creating simple and complex shapes.
-*   Using different voxel dimensions.
+*   Using different default voxel dimensions.
+*   Overriding dimensions for individual voxels.
 *   Utilizing various [`CubeAnchor`](cubeforge/constants.py ) options.
 *   Saving in both ASCII and Binary STL formats.
 *   Generating a surface with random heights.
@@ -85,8 +88,8 @@ The output STL files will be saved in the [`examples`](examples ) directory.
 
 *   **[`cubeforge.VoxelModel`](cubeforge/model.py ):** The main class for creating and managing the voxel model.
     *   [`__init__(self, voxel_dimensions=(1.0, 1.0, 1.0))`](cubeforge/model.py ): Initializes the model, optionally setting default voxel dimensions.
-    *   [`add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG)`](cubeforge/model.py ): Adds a single voxel.
-    *   [`add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG)`](cubeforge/model.py ): Adds multiple voxels.
+    *   [`add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py ): Adds a single voxel, optionally with custom dimensions.
+    *   [`add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py ): Adds multiple voxels, optionally with custom dimensions.
     *   [`remove_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG)`](cubeforge/model.py ): Removes a voxel.
     *   [`clear(self)`](cubeforge/model.py ): Removes all voxels.
     *   [`generate_mesh(self)`](cubeforge/model.py ): Generates the triangle mesh data.

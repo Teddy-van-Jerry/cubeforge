@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class VoxelModel:
     """
-    Represents a 3D model composed of voxels aligned to a grid.
+    Represents a 3D model composed of voxels.
     Each voxel can have independent dimensions (width, height, depth).
 
     Allows adding voxels based on coordinates and anchor points, and exporting
@@ -24,20 +24,20 @@ class VoxelModel:
         Args:
             voxel_dimensions (tuple): A tuple of three positive numbers
                                      (width, height, depth) representing the
-                                     size of each voxel in the X, Y, and Z
-                                     dimensions, respectively. Defaults to (1.0, 1.0, 1.0).
+                                     default size of each voxel.
         """
         if not (isinstance(voxel_dimensions, (tuple, list)) and
                 len(voxel_dimensions) == 3 and
                 all(isinstance(dim, (int, float)) and dim > 0 for dim in voxel_dimensions)):
             raise ValueError("voxel_dimensions must be a tuple or list of three positive numbers (width, height, depth).")
         self.voxel_dimensions = tuple(float(dim) for dim in voxel_dimensions)
-        # Stores the integer grid coordinates (ix, iy, iz) of each voxel.
-        # The actual position depends on the grid coordinates and voxel_dimensions.
-        self._voxels = set()
-        logger.info(f"VoxelModel initialized with voxel_dimensions={self.voxel_dimensions}")
+        # Stores voxel data as a dictionary:
+        # key: integer grid coordinate (ix, iy, iz)
+        # value: tuple of dimensions (width, height, depth) for that voxel
+        self._voxels = {}
+        logger.info(f"VoxelModel initialized with default voxel_dimensions={self.voxel_dimensions}")
 
-    def _calculate_min_corner(self, x, y, z, anchor):
+    def _calculate_min_corner(self, x, y, z, anchor, dimensions):
         """
         Calculates the minimum corner coordinates based on anchor point and voxel dimensions.
 
@@ -48,6 +48,7 @@ class VoxelModel:
             y (float): Y-coordinate of the anchor point.
             z (float): Z-coordinate of the anchor point.
             anchor (CubeAnchor): The anchor type.
+            dimensions (tuple): The (width, height, depth) of the voxel.
 
         Returns:
             tuple: (min_x, min_y, min_z) coordinates of the voxel's minimum corner.
@@ -55,7 +56,7 @@ class VoxelModel:
         Raises:
             ValueError: If an invalid anchor point is provided.
         """
-        size_x, size_y, size_z = self.voxel_dimensions
+        size_x, size_y, size_z = dimensions
         half_x, half_y, half_z = size_x / 2.0, size_y / 2.0, size_z / 2.0
 
         if anchor == CubeAnchor.CORNER_NEG:
@@ -73,7 +74,7 @@ class VoxelModel:
 
         return min_x, min_y, min_z
 
-    def add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG):
+    def add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG, dimensions=None):
         """
         Adds a voxel to the model. Replaces add_cube.
 
@@ -84,23 +85,32 @@ class VoxelModel:
             anchor (CubeAnchor): The reference point within the voxel that
                                 (x, y, z) corresponds to. Defaults to
                                 CubeAnchor.CORNER_NEG.
+            dimensions (tuple, optional): The (width, height, depth) for this
+                                          specific voxel. If None, the model's
+                                          default dimensions are used.
         """
-        min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor)
+        voxel_dims = self.voxel_dimensions if dimensions is None else tuple(float(d) for d in dimensions)
+        if dimensions is not None and not (isinstance(voxel_dims, (tuple, list)) and
+                                           len(voxel_dims) == 3 and
+                                           all(isinstance(d, (int, float)) and d > 0 for d in voxel_dims)):
+            raise ValueError("Custom dimensions must be a tuple or list of three positive numbers.")
 
-        # Calculate grid coordinates based on minimum corner and dimensions
-        # Using round to snap to the nearest grid point.
+        min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor, voxel_dims)
+
+        # Calculate grid coordinates based on minimum corner and *default* dimensions
+        # This ensures voxels snap to a consistent grid.
         grid_x = round(min_x / self.voxel_dimensions[0])
         grid_y = round(min_y / self.voxel_dimensions[1])
         grid_z = round(min_z / self.voxel_dimensions[2])
 
         grid_coord = (grid_x, grid_y, grid_z)
-        self._voxels.add(grid_coord)
+        self._voxels[grid_coord] = voxel_dims
         # logger.debug(f"Added voxel at grid {grid_coord} (from anchor {anchor} at ({x},{y},{z}))")
 
     # Alias add_cube to add_voxel for backward compatibility (optional, but can be helpful)
     add_cube = add_voxel
 
-    def add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG):
+    def add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG, dimensions=None):
         """
         Adds multiple voxels from an iterable. Replaces add_cubes.
 
@@ -108,9 +118,11 @@ class VoxelModel:
             coordinates (iterable): An iterable of (x, y, z) tuples or lists.
             anchor (CubeAnchor): The anchor point to use for all voxels added
                                 in this call.
+            dimensions (tuple, optional): The dimensions to apply to all voxels
+                                          in this call. If None, defaults are used.
         """
         for x_coord, y_coord, z_coord in coordinates:
-            self.add_voxel(x_coord, y_coord, z_coord, anchor)
+            self.add_voxel(x_coord, y_coord, z_coord, anchor, dimensions)
 
     # Alias add_cubes to add_voxels
     add_cubes = add_voxels
@@ -126,14 +138,17 @@ class VoxelModel:
             anchor (CubeAnchor): The reference point within the voxel that
                                 (x, y, z) corresponds to.
         """
-        min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor)
+        # Note: Removal does not need custom dimensions, as it identifies the
+        # voxel by its position on the grid, which is calculated using default dimensions.
+        min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor, self.voxel_dimensions)
 
         grid_x = round(min_x / self.voxel_dimensions[0])
         grid_y = round(min_y / self.voxel_dimensions[1])
         grid_z = round(min_z / self.voxel_dimensions[2])
 
         grid_coord = (grid_x, grid_y, grid_z)
-        self._voxels.discard(grid_coord)
+        if grid_coord in self._voxels:
+            del self._voxels[grid_coord]
         # logger.debug(f"Attempted removal at grid {grid_coord}")
 
     # Alias remove_cube to remove_voxel
@@ -162,7 +177,7 @@ class VoxelModel:
 
         logger.info(f"Generating mesh for {len(self._voxels)} voxels...")
         triangles = []
-        size_x, size_y, size_z = self.voxel_dimensions # Use specific dimensions
+        # Voxel dimensions are now fetched per-voxel, so size_x, etc. are defined inside the loop.
 
         # Define faces by normal, neighbor offset, and vertex indices (0-7)
         # Vertex indices correspond to relative positions scaled by dimensions:
@@ -180,13 +195,13 @@ class VoxelModel:
         ]
 
         processed_faces = 0
-        for gx, gy, gz in self._voxels:
-            # Calculate the minimum corner based on grid coordinates and dimensions
-            min_cx = gx * size_x
-            min_cy = gy * size_y
-            min_cz = gz * size_z
+        for (gx, gy, gz), (size_x, size_y, size_z) in self._voxels.items():
+            # Calculate the minimum corner based on grid coordinates and *default* dimensions
+            min_cx = gx * self.voxel_dimensions[0]
+            min_cy = gy * self.voxel_dimensions[1]
+            min_cz = gz * self.voxel_dimensions[2]
 
-            # Calculate the 8 absolute vertex coordinates for this voxel
+            # Calculate the 8 absolute vertex coordinates for this voxel using its specific dimensions
             verts = [
                 (min_cx + (i % 2) * size_x, min_cy + ((i // 2) % 2) * size_y, min_cz + (i // 4) * size_z)
                 for i in range(8)
@@ -194,8 +209,13 @@ class VoxelModel:
 
             for normal, offset, indices in faces_data:
                 neighbor_coord = (gx + offset[0], gy + offset[1], gz + offset[2])
+                neighbor_dims = self._voxels.get(neighbor_coord)
 
-                if neighbor_coord not in self._voxels: # Exposed face
+                # A face is exposed if there is no neighbor, OR if the neighbor
+                # has different dimensions, which would create a complex partial
+                # surface. For simplicity and correctness of the outer shell,
+                # we will generate the face in the latter case.
+                if not neighbor_dims or neighbor_dims != (size_x, size_y, size_z): # Exposed face
                     processed_faces += 1
                     # Get the four vertices for this face using the indices
                     v0 = verts[indices[0]]
@@ -215,7 +235,7 @@ class VoxelModel:
 
         Args:
             filename (str): The path to the output file.
-            format (str): The desired output format identifier (e.g.,
+            format (str): The desired output format identifier (e.g/,
                         'stl_binary', 'stl_ascii'). Case-insensitive.
                         Defaults to 'stl_binary'.
             **kwargs: Additional arguments passed directly to the specific

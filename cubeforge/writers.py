@@ -137,5 +137,5 @@ def get_writer(format_id):
     if writer_class:
         return writer_class()
     else:
-        supported_formats = ", ".join(_writer_map.keys())
+        supported_formats = ", ".join(sorted(_writer_map.keys()))
         raise ValueError(f"Unsupported format: '{format_id}'. Supported formats are: {supported_formats}")
