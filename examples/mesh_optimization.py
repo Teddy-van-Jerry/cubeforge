@@ -27,8 +27,7 @@ print("Use optimize=False to disable if needed.\n")
 
 # Example 1: Flat 10x10 surface
 print("\n--- Example 1: Flat 10×10 Surface (100 voxels) ---")
-model1 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model1.set_z_up()
+model1 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 for x in range(10):
     for y in range(10):
@@ -50,8 +49,7 @@ print(f"Reduction:            {(1 - size_opt/size_unopt)*100:.1f}% ({size_unopt/
 
 # Example 2: Hollow box (complex interior)
 print("\n--- Example 2: Hollow 10×10×10 Box (488 voxels) ---")
-model2 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model2.set_z_up()
+model2 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Create hollow box - walls only
 for x in range(10):
@@ -75,8 +73,7 @@ print(f"Reduction:            {(1 - size_opt2/size_unopt2)*100:.1f}% ({size_unop
 
 # Example 3: L-shaped structure
 print("\n--- Example 3: L-Shaped Building (60 voxels) ---")
-model3 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model3.set_z_up()
+model3 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Vertical part of L
 for x in range(3):
@@ -104,8 +101,7 @@ print(f"Reduction:            {(1 - size_opt3/size_unopt3)*100:.1f}% ({size_unop
 
 # Example 4: Stairs (irregular but still benefits from optimization)
 print("\n--- Example 4: Stairs (55 voxels, irregular pattern) ---")
-model4 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model4.set_z_up()
+model4 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Create stairs
 for step in range(10):
@@ -128,8 +124,7 @@ print(f"Reduction:            {(1 - size_opt4/size_unopt4)*100:.1f}% ({size_unop
 
 # Example 5: Tower with windows (complex with holes)
 print("\n--- Example 5: Tower with Windows (280 voxels) ---")
-model5 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model5.set_z_up()
+model5 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Build tower with periodic windows
 for z in range(20):
@@ -157,8 +152,7 @@ print(f"Reduction:            {(1 - size_opt5/size_unopt5)*100:.1f}% ({size_unop
 
 # Example 6: Checkerboard pattern (worst case for optimization)
 print("\n--- Example 6: Checkerboard 10×10 (50 voxels, worst case) ---")
-model6 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model6.set_z_up()
+model6 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Checkerboard pattern - minimal merging possible
 for x in range(10):
@@ -181,8 +175,7 @@ print("Note: Checkerboard is worst-case - can't merge adjacent faces")
 
 # Example 7: Cross shape (tests merging in multiple directions)
 print("\n--- Example 7: Cross/Plus Shape (76 voxels) ---")
-model7 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model7.set_z_up()
+model7 = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Vertical bar of cross
 for x in range(3, 6):
@@ -218,11 +211,11 @@ The algorithm merges adjacent coplanar voxel faces into larger rectangles,
 dramatically reducing triangle count and file sizes.
 
 TEST RESULTS ANALYSIS:
-✓ Flat surfaces: 95-99% reduction (best case)
-✓ Hollow structures: 80-95% reduction (excellent)
-✓ L-shapes & stairs: 60-80% reduction (very good)
-✓ Towers with holes: 50-70% reduction (good)
-✓ Checkerboard: Minimal reduction (expected worst case)
+* Flat surfaces: 95-99% reduction (best case)
+* Hollow structures: 80-95% reduction (excellent)
+* L-shapes & stairs: 60-80% reduction (very good)
+* Towers with holes: 50-70% reduction (good)
+* Checkerboard: Minimal reduction (expected worst case)
 
 The optimization is lossless - geometry is identical, just more efficient!
 

@@ -93,9 +93,8 @@ In Z-up mode, the Z axis represents the vertical/height direction:
 ```python
 import cubeforge
 
-# Create model and set to Z-up mode for correct STL orientation
-model = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model.set_z_up()  # Important for 3D printing!
+# Create model in Z-up mode for correct STL orientation
+model = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Stack voxels vertically along Z axis
 model.add_voxel(0, 0, 0)  # Bottom
@@ -104,12 +103,6 @@ model.add_voxel(0, 0, 2)  # Top
 
 # Save - will appear correctly oriented in slicers!
 model.save_mesh("tower.stl", format='stl_binary')
-```
-
-You can switch between modes at any time:
-```python
-model.set_y_up()  # Switch to Y-up mode
-model.set_z_up()  # Switch to Z-up mode
 ```
 
 ## Mesh Optimization
@@ -134,8 +127,7 @@ Optimization is **enabled by default** - just use `save_mesh()`:
 ```python
 import cubeforge
 
-model = cubeforge.VoxelModel()
-model.set_z_up()
+model = cubeforge.VoxelModel(coordinate_system='z_up')
 
 # Create a large flat surface
 for x in range(20):
@@ -189,9 +181,7 @@ The output STL files will be saved in the [`examples`](examples) directory.
 ## API Overview
 
 *   **[`cubeforge.VoxelModel`](cubeforge/model.py):** The main class for creating and managing the voxel model.
-    *   [`__init__(self, voxel_dimensions=(1.0, 1.0, 1.0))`](cubeforge/model.py): Initializes the model, optionally setting default voxel dimensions.
-    *   [`set_y_up(self)`](cubeforge/model.py): Sets the coordinate system to Y-up mode (default).
-    *   [`set_z_up(self)`](cubeforge/model.py): Sets the coordinate system to Z-up mode (recommended for 3D printing).
+    *   [`__init__(self, voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='y_up')`](cubeforge/model.py): Initializes the model with default voxel dimensions and coordinate system. Use `coordinate_system='z_up'` for 3D printing.
     *   [`add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds a single voxel, optionally with custom dimensions.
     *   [`add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds multiple voxels, optionally with custom dimensions.
     *   [`remove_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG)`](cubeforge/model.py): Removes a voxel.

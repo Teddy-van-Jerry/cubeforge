@@ -17,31 +17,42 @@ class VoxelModel:
     the resulting shape using various mesh writers. Logging messages are emitted
     via the standard 'logging' module; configuration is up to the application.
     """
-    def __init__(self, voxel_dimensions=(1.0, 1.0, 1.0)):
+    def __init__(self, voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='y_up'):
         """
         Initializes the VoxelModel.
 
         Args:
-            voxel_dimensions (tuple): A tuple of three positive numbers
-                                     (width, height, depth) representing the
+            voxel_dimensions (tuple): A tuple of three positive numbers representing the
                                      default size of each voxel.
+                                     - In Y-up mode: (width, height, depth) = (x, y, z)
+                                     - In Z-up mode: (width, depth, height) = (x, y, z)
+            coordinate_system (str): The coordinate system to use. Either 'y_up' (default)
+                                    or 'z_up'. Use 'z_up' for 3D printing to ensure correct
+                                    orientation in most slicers.
         """
         if not (isinstance(voxel_dimensions, (tuple, list)) and
                 len(voxel_dimensions) == 3 and
                 all(isinstance(dim, (int, float)) and dim > 0 for dim in voxel_dimensions)):
-            raise ValueError("voxel_dimensions must be a tuple or list of three positive numbers (width, height, depth).")
+            raise ValueError("voxel_dimensions must be a tuple or list of three positive numbers.")
+        if coordinate_system not in ('y_up', 'z_up'):
+            raise ValueError("coordinate_system must be either 'y_up' or 'z_up'.")
+
         self.voxel_dimensions = tuple(float(dim) for dim in voxel_dimensions)
         # Stores voxel data as a dictionary:
         # key: integer grid coordinate (ix, iy, iz)
         # value: tuple of dimensions (width, height, depth) for that voxel
         self._voxels = {}
         # Coordinate system: 'y_up' (default) or 'z_up'
-        self._coordinate_system = 'y_up'
-        logger.info(f"VoxelModel initialized with default voxel_dimensions={self.voxel_dimensions}")
+        self._coordinate_system = coordinate_system
+        logger.info(f"VoxelModel initialized with default voxel_dimensions={self.voxel_dimensions}, coordinate_system={coordinate_system}")
 
     def set_y_up(self):
         """
         Sets the coordinate system to Y-up mode.
+
+        .. deprecated::
+            Prefer setting coordinate_system='y_up' in __init__() instead.
+            Changing coordinate systems after initialization can be confusing.
 
         In Y-up mode (default):
         - Y axis represents vertical/height
@@ -58,6 +69,10 @@ class VoxelModel:
     def set_z_up(self):
         """
         Sets the coordinate system to Z-up mode.
+
+        .. deprecated::
+            Prefer setting coordinate_system='z_up' in __init__() instead.
+            Changing coordinate systems after initialization can be confusing.
 
         In Z-up mode (common for STL viewers/slicers):
         - Z axis represents vertical/height

@@ -39,8 +39,7 @@ print("NOTE: This will appear rotated 90° in most STL viewers (they expect Z-up
 print("\n--- Example 2: Vertical Tower in Z-up Mode ---")
 print("Creating a vertical tower stacked along Z axis (Z is up)")
 
-model_z_up = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model_z_up.set_z_up()  # Switch to Z-up mode
+model_z_up = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 # In Z-up mode, stack along Z to create vertical tower
 model_z_up.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CORNER_NEG)
 model_z_up.add_voxel(0, 0, 1, anchor=cubeforge.CubeAnchor.CORNER_NEG)
@@ -56,8 +55,7 @@ print("NOTE: This will appear correctly oriented in STL viewers!")
 print("\n--- Example 3: Using Anchors in Z-up Mode ---")
 print("Demonstrating BOTTOM_CENTER and TOP_CENTER in Z-up (they refer to Z faces)")
 
-model_anchors = cubeforge.VoxelModel(voxel_dimensions=(2.0, 2.0, 1.0))
-model_anchors.set_z_up()  # Z is up
+model_anchors = cubeforge.VoxelModel(voxel_dimensions=(2.0, 2.0, 1.0), coordinate_system='z_up')
 
 # Base block centered at origin on the bottom
 model_anchors.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.BOTTOM_CENTER)
@@ -74,8 +72,7 @@ print(f"Saved '{output_filename}'")
 print("\n--- Example 4: Custom Dimensions in Z-up Mode ---")
 print("In Z-up mode, dimensions are (width, depth, height)")
 
-model_custom = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model_custom.set_z_up()
+model_custom = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
 # Create a base (wide and shallow)
 model_custom.add_voxel(0, 0, 0,
@@ -103,8 +100,7 @@ model_comp_y.save_mesh(output_filename, format='stl_binary', solid_name="Compari
 print(f"Saved '{output_filename}' (Y-up mode)")
 
 # Z-up mode
-model_comp_z = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
-model_comp_z.set_z_up()
+model_comp_z = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 model_comp_z.add_voxels([(0, 0, 0), (1, 0, 0), (0, 1, 0)])
 output_filename = os.path.join(output_dir, "comparison_z_up.stl")
 model_comp_z.save_mesh(output_filename, format='stl_binary', solid_name="ComparisonZUp")
