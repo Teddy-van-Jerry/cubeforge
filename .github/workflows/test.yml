@@ -32,6 +32,8 @@ jobs:
     - name: Run example script
       run: |
         python examples/create_shapes.py
+        python examples/coordinate_systems.py
+        python examples/mesh_optimization.py
       shell: bash
 
     - name: Verify example outputs

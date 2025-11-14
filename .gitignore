@@ -164,3 +164,6 @@ cython_debug/
 
 # Exported 3D models
 *.stl
+
+# Claude Code
+CLAUDE.local.md

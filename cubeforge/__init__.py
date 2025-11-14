@@ -24,6 +24,6 @@ __all__ = [
 ]
 
 # Define package version
-__version__ = "0.1.0" # Incremented version for voxel dimension change
+__version__ = "0.2.1" # Added configurable Y-up/Z-up coordinate systems
 
 # logger.info(f"CubeForge package version {__version__} loaded.")
