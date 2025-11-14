@@ -128,9 +128,15 @@ class VoxelModel:
 
         # Calculate grid coordinates based on minimum corner and *default* dimensions
         # This ensures voxels snap to a consistent grid.
-        raw_x = min_x / self.voxel_dimensions[0]
-        raw_y = min_y / self.voxel_dimensions[1]
-        raw_z = min_z / self.voxel_dimensions[2]
+        # In Z-up mode, we need to use swapped dimensions for grid calculation
+        # because internally we work in Y-up space
+        grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
+        if self._coordinate_system == 'z_up':
+            grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
+
+        raw_x = min_x / grid_dim_x
+        raw_y = min_y / grid_dim_y
+        raw_z = min_z / grid_dim_z
         grid_x = round(raw_x)
         grid_y = round(raw_y)
         grid_z = round(raw_z)
@@ -270,17 +276,24 @@ class VoxelModel:
             neighbor_coord = (gx + offset[0], gy + offset[1], gz + offset[2])
             neighbor_dims = self._voxels.get(neighbor_coord)
 
+            # In Z-up mode, swap Y and Z dimensions before using them
+            build_size_x, build_size_y, build_size_z = size_x, size_y, size_z
+            grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
+            if self._coordinate_system == 'z_up':
+                build_size_y, build_size_z = size_z, size_y
+                grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
+
             # Face is exposed if no neighbor or neighbor has different dimensions
             if not neighbor_dims or neighbor_dims != (size_x, size_y, size_z):
                 # Calculate face position in world coordinates
-                min_cx = gx * self.voxel_dimensions[0]
-                min_cy = gy * self.voxel_dimensions[1]
-                min_cz = gz * self.voxel_dimensions[2]
+                min_cx = gx * grid_dim_x
+                min_cy = gy * grid_dim_y
+                min_cz = gz * grid_dim_z
 
                 # Position along the normal axis
                 pos_on_axis = [min_cx, min_cy, min_cz][axis]
                 if direction == 1:  # Positive face
-                    pos_on_axis += [size_x, size_y, size_z][axis]
+                    pos_on_axis += [build_size_x, build_size_y, build_size_z][axis]
 
                 # The two axes perpendicular to the normal
                 u_axis = (axis + 1) % 3
@@ -288,8 +301,8 @@ class VoxelModel:
 
                 u_pos = [min_cx, min_cy, min_cz][u_axis]
                 v_pos = [min_cx, min_cy, min_cz][v_axis]
-                u_size = [size_x, size_y, size_z][u_axis]
-                v_size = [size_x, size_y, size_z][v_axis]
+                u_size = [build_size_x, build_size_y, build_size_z][u_axis]
+                v_size = [build_size_x, build_size_y, build_size_z][v_axis]
 
                 faces.append({
                     'axis': axis,
@@ -370,8 +383,13 @@ class VoxelModel:
             u_axis_idx = (axis + 1) % 3
             v_axis_idx = (axis + 2) % 3
 
-            u_start = u_idx * self.voxel_dimensions[u_axis_idx]
-            v_start = v_idx * self.voxel_dimensions[v_axis_idx]
+            # In Z-up mode, swap Y and Z dimensions
+            merge_grid_dims = list(self.voxel_dimensions)
+            if self._coordinate_system == 'z_up':
+                merge_grid_dims[1], merge_grid_dims[2] = merge_grid_dims[2], merge_grid_dims[1]
+
+            u_start = u_idx * merge_grid_dims[u_axis_idx]
+            v_start = v_idx * merge_grid_dims[v_axis_idx]
             u_length = (u_end - u_idx + 1) * u_size
             v_length = (v_end - v_idx + 1) * v_size
 
@@ -486,13 +504,24 @@ class VoxelModel:
         processed_faces = 0
         for (gx, gy, gz), (size_x, size_y, size_z) in self._voxels.items():
             # Calculate the minimum corner based on grid coordinates and *default* dimensions
-            min_cx = gx * self.voxel_dimensions[0]
-            min_cy = gy * self.voxel_dimensions[1]
-            min_cz = gz * self.voxel_dimensions[2]
+            # In Z-up mode, swap the dimensions used for grid-to-world conversion
+            grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
+            if self._coordinate_system == 'z_up':
+                grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
+
+            min_cx = gx * grid_dim_x
+            min_cy = gy * grid_dim_y
+            min_cz = gz * grid_dim_z
+
+            # In Z-up mode, we need to swap Y and Z dimensions before building vertices
+            # because we'll swap the coordinate axes in the output
+            build_size_x, build_size_y, build_size_z = size_x, size_y, size_z
+            if self._coordinate_system == 'z_up':
+                build_size_y, build_size_z = size_z, size_y
 
             # Calculate the 8 absolute vertex coordinates for this voxel using its specific dimensions
             verts = [
-                (min_cx + (i % 2) * size_x, min_cy + ((i // 2) % 2) * size_y, min_cz + (i // 4) * size_z)
+                (min_cx + (i % 2) * build_size_x, min_cy + ((i // 2) % 2) * build_size_y, min_cz + (i // 4) * build_size_z)
                 for i in range(8)
             ]
 
