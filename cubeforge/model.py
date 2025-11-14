@@ -22,13 +22,14 @@ class VoxelModel:
         Initializes the VoxelModel.
 
         Args:
-            voxel_dimensions (tuple): A tuple of three positive numbers representing the
-                                     default size of each voxel.
-                                     - In Y-up mode: (width, height, depth) = (x, y, z)
-                                     - In Z-up mode: (width, depth, height) = (x, y, z)
+            voxel_dimensions (tuple): A tuple of three positive numbers (x_size, y_size, z_size)
+                                     representing the default size of each voxel along each axis.
+                                     Always in (x, y, z) order regardless of coordinate system.
             coordinate_system (str): The coordinate system to use. Either 'y_up' (default)
                                     or 'z_up'. Use 'z_up' for 3D printing to ensure correct
                                     orientation in most slicers.
+                                    - 'y_up': Y axis is vertical (mathematical convention)
+                                    - 'z_up': Z axis is vertical (3D printing convention)
         """
         if not (isinstance(voxel_dimensions, (tuple, list)) and
                 len(voxel_dimensions) == 3 and
@@ -46,60 +47,11 @@ class VoxelModel:
         self._coordinate_system = coordinate_system
         logger.info(f"VoxelModel initialized with default voxel_dimensions={self.voxel_dimensions}, coordinate_system={coordinate_system}")
 
-    def set_y_up(self):
-        """
-        Sets the coordinate system to Y-up mode.
-
-        .. deprecated::
-            Prefer setting coordinate_system='y_up' in __init__() instead.
-            Changing coordinate systems after initialization can be confusing.
-
-        In Y-up mode (default):
-        - Y axis represents vertical/height
-        - Coordinates are (x, y, z) where y is up
-        - Dimensions are (width, height, depth) = (x, y, z)
-        - BOTTOM_CENTER/TOP_CENTER refer to Y faces
-        """
-        if self._coordinate_system == 'z_up':
-            # Swap voxel_dimensions from Z-up back to Y-up
-            self.voxel_dimensions = (self.voxel_dimensions[0], self.voxel_dimensions[2], self.voxel_dimensions[1])
-        self._coordinate_system = 'y_up'
-        logger.info("Coordinate system set to Y-up")
-
-    def set_z_up(self):
-        """
-        Sets the coordinate system to Z-up mode.
-
-        .. deprecated::
-            Prefer setting coordinate_system='z_up' in __init__() instead.
-            Changing coordinate systems after initialization can be confusing.
-
-        In Z-up mode (common for STL viewers/slicers):
-        - Z axis represents vertical/height
-        - Coordinates are (x, y, z) where z is up
-        - Dimensions are (width, depth, height) = (x, y, z)
-        - BOTTOM_CENTER/TOP_CENTER refer to Z faces
-
-        This mode ensures exported STL files appear correctly oriented
-        in most 3D printing slicers and CAD programs.
-        """
-        if self._coordinate_system == 'y_up':
-            # Swap voxel_dimensions from Y-up to Z-up
-            self.voxel_dimensions = (self.voxel_dimensions[0], self.voxel_dimensions[2], self.voxel_dimensions[1])
-        self._coordinate_system = 'z_up'
-        logger.info("Coordinate system set to Z-up")
-
     def _swap_yz_if_needed(self, x, y, z):
         """Helper method to swap Y and Z coordinates when in Z-up mode."""
         if self._coordinate_system == 'z_up':
             return x, z, y
         return x, y, z
-
-    def _swap_yz_dims_if_needed(self, dimensions):
-        """Helper method to swap Y and Z in dimension tuples when in Z-up mode."""
-        if self._coordinate_system == 'z_up':
-            return (dimensions[0], dimensions[2], dimensions[1])
-        return dimensions
 
     def _calculate_min_corner(self, x, y, z, anchor, dimensions):
         """
@@ -159,15 +111,14 @@ class VoxelModel:
             anchor (CubeAnchor): The reference point within the voxel that
                                 (x, y, z) corresponds to. Defaults to
                                 CubeAnchor.CORNER_NEG.
-            dimensions (tuple, optional): In Y-up mode: (width, height, depth).
-                                          In Z-up mode: (width, depth, height).
+            dimensions (tuple, optional): Custom dimensions (x_size, y_size, z_size) for this voxel.
+                                          Always in (x, y, z) order regardless of coordinate system.
                                           If None, the model's default dimensions are used.
         """
-        # Swap coordinates and dimensions if in Z-up mode
+        # Swap coordinates if in Z-up mode
         x, y, z = self._swap_yz_if_needed(x, y, z)
 
         voxel_dims = self.voxel_dimensions if dimensions is None else tuple(float(d) for d in dimensions)
-        voxel_dims = self._swap_yz_dims_if_needed(voxel_dims)
         if dimensions is not None and not (isinstance(voxel_dims, (tuple, list)) and
                                            len(voxel_dims) == 3 and
                                            all(isinstance(d, (int, float)) and d > 0 for d in voxel_dims)):

@@ -72,19 +72,21 @@ print(f"Saved mesh to {output_filename}")
 
 CubeForge supports two coordinate system modes:
 
+**Important:** Dimensions are always specified as `(x_size, y_size, z_size)` in axis order, regardless of coordinate system. The coordinate system only determines which axis is vertical.
+
 ### Y-up Mode (Default)
 In Y-up mode, the Y axis represents the vertical/height direction:
 - Coordinates: `(x, y, z)` where y is up
-- Dimensions: `(width, height, depth)` maps to `(x, y, z)`
-- `BOTTOM_CENTER`/`TOP_CENTER` anchors refer to Y faces
+- Dimensions: `(x_size, y_size, z_size)` where y_size is the vertical dimension
+- `BOTTOM_CENTER`/`TOP_CENTER` anchors refer to Y faces (top/bottom)
 
 **Note:** Models created in Y-up mode will appear rotated 90° in most STL viewers and 3D printing slicers, which expect Z-up orientation.
 
 ### Z-up Mode (Recommended for 3D Printing)
 In Z-up mode, the Z axis represents the vertical/height direction:
 - Coordinates: `(x, y, z)` where z is up
-- Dimensions: `(width, depth, height)` maps to `(x, y, z)`
-- `BOTTOM_CENTER`/`TOP_CENTER` anchors refer to Z faces
+- Dimensions: `(x_size, y_size, z_size)` where z_size is the vertical dimension
+- `BOTTOM_CENTER`/`TOP_CENTER` anchors refer to Z faces (top/bottom)
 
 **This mode ensures exported STL files appear correctly oriented in most 3D printing slicers and CAD programs.**
 
