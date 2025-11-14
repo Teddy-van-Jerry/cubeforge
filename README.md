@@ -2,8 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Documentation](https://img.shields.io/badge/docs-cubeforge.wqzhao.org-purple)](https://cubeforge.wqzhao.org)
 
 **CubeForge** is a Python library designed to easily generate 3D mesh files (currently STL format) by defining models voxel by voxel. It allows for flexible voxel dimensions and positioning using various anchor points.
+
+[**[Documentation](https://cubeforge.wqzhao.org)**] | [**[GitHub](https://github.com/Teddy-van-Jerry/cubeforge)**] | [**[PyPI](https://pypi.org/project/cubeforge/)**]
 
 ## Features
 

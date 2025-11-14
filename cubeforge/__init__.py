@@ -24,6 +24,6 @@ __all__ = [
 ]
 
 # Define package version
-__version__ = "0.2.1" # Added configurable Y-up/Z-up coordinate systems
+__version__ = "0.2.2" # Fixed non-uniform dimension handling in Z-up mode
 
 # logger.info(f"CubeForge package version {__version__} loaded.")

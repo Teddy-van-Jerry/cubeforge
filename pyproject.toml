@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cubeforge"
-version = "0.2.1"
+version = "0.2.2"
 authors = [
   { name="Teddy van Jerry", email="me@teddy-van-jerry.org" },
 ]
@@ -26,4 +26,5 @@ keywords = ["stl", "3d", "mesh", "voxel", "cube", "geometry", "cad"]
 
 [project.urls]
 "Homepage" = "https://github.com/Teddy-van-Jerry/cubeforge"
+"Documentation" = "https://cubeforge.wqzhao.org"
 "Bug Tracker" = "https://github.com/Teddy-van-Jerry/cubeforge/issues"
