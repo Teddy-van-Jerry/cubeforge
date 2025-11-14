@@ -30,6 +30,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx.ext.autosummary',
+    'sphinx_copybutton',
 ]
 
 templates_path = ['_templates']
@@ -64,9 +65,8 @@ html_theme_options = {
     ],
 }
 
-# Logo and favicon (optional, uncomment if you add these)
-# html_logo = "_static/logo.png"
-# html_favicon = "_static/favicon.ico"
+# Favicon (ICO for compatibility, SVG as fallback)
+html_favicon = "_static/favicon.ico"
 
 # -- Extension configuration -------------------------------------------------
 
@@ -90,3 +90,9 @@ intersphinx_mapping = {
 
 # Autosummary settings
 autosummary_generate = True
+
+# Copybutton settings
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
+copybutton_only_copy_prompt_lines = False
+copybutton_remove_prompts = True
