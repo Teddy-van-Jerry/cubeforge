@@ -118,11 +118,18 @@ class VoxelModel:
         # Swap coordinates if in Z-up mode
         x, y, z = self._swap_yz_if_needed(x, y, z)
 
-        voxel_dims = self.voxel_dimensions if dimensions is None else tuple(float(d) for d in dimensions)
-        if dimensions is not None and not (isinstance(voxel_dims, (tuple, list)) and
-                                           len(voxel_dims) == 3 and
-                                           all(isinstance(d, (int, float)) and d > 0 for d in voxel_dims)):
-            raise ValueError("Custom dimensions must be a tuple or list of three positive numbers.")
+        # Get dimensions and validate
+        if dimensions is None:
+            voxel_dims = self.voxel_dimensions
+        else:
+            voxel_dims = tuple(float(d) for d in dimensions)
+            if not (isinstance(voxel_dims, (tuple, list)) and
+                    len(voxel_dims) == 3 and
+                    all(isinstance(d, (int, float)) and d > 0 for d in voxel_dims)):
+                raise ValueError("Custom dimensions must be a tuple or list of three positive numbers.")
+            # Swap custom dimensions if in Z-up mode to convert to internal Y-up representation
+            if self._coordinate_system == 'z_up':
+                voxel_dims = (voxel_dims[0], voxel_dims[2], voxel_dims[1])
 
         min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor, voxel_dims)
 
@@ -276,11 +283,10 @@ class VoxelModel:
             neighbor_coord = (gx + offset[0], gy + offset[1], gz + offset[2])
             neighbor_dims = self._voxels.get(neighbor_coord)
 
-            # In Z-up mode, swap Y and Z dimensions before using them
+            # Dimensions are already stored in internal Y-up representation
             build_size_x, build_size_y, build_size_z = size_x, size_y, size_z
             grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
             if self._coordinate_system == 'z_up':
-                build_size_y, build_size_z = size_z, size_y
                 grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
 
             # Face is exposed if no neighbor or neighbor has different dimensions
@@ -337,12 +343,16 @@ class VoxelModel:
         pos_on_axis = faces[0]['pos_on_axis']
 
         # Build a grid of faces by their u,v positions and sizes
-        # For uniform voxels, we can use a simpler greedy algorithm
+        # Face positions are in internal Y-up space, so use swapped grid dims if needed
+        grid_dims = list(self.voxel_dimensions)
+        if self._coordinate_system == 'z_up':
+            grid_dims[1], grid_dims[2] = grid_dims[2], grid_dims[1]
+
         face_grid = {}
         for face in faces:
             # Use grid coordinates for lookup (only works for uniform voxels)
-            u_idx = int(round(face['u_pos'] / self.voxel_dimensions[(axis + 1) % 3]))
-            v_idx = int(round(face['v_pos'] / self.voxel_dimensions[(axis + 2) % 3]))
+            u_idx = int(round(face['u_pos'] / grid_dims[(axis + 1) % 3]))
+            v_idx = int(round(face['v_pos'] / grid_dims[(axis + 2) % 3]))
             u_size = face['u_size']
             v_size = face['v_size']
 
@@ -383,13 +393,9 @@ class VoxelModel:
             u_axis_idx = (axis + 1) % 3
             v_axis_idx = (axis + 2) % 3
 
-            # In Z-up mode, swap Y and Z dimensions
-            merge_grid_dims = list(self.voxel_dimensions)
-            if self._coordinate_system == 'z_up':
-                merge_grid_dims[1], merge_grid_dims[2] = merge_grid_dims[2], merge_grid_dims[1]
-
-            u_start = u_idx * merge_grid_dims[u_axis_idx]
-            v_start = v_idx * merge_grid_dims[v_axis_idx]
+            # Use the already-swapped grid_dims from above
+            u_start = u_idx * grid_dims[u_axis_idx]
+            v_start = v_idx * grid_dims[v_axis_idx]
             u_length = (u_end - u_idx + 1) * u_size
             v_length = (v_end - v_idx + 1) * v_size
 
@@ -513,11 +519,9 @@ class VoxelModel:
             min_cy = gy * grid_dim_y
             min_cz = gz * grid_dim_z
 
-            # In Z-up mode, we need to swap Y and Z dimensions before building vertices
-            # because we'll swap the coordinate axes in the output
+            # Dimensions are already stored in internal Y-up representation,
+            # so we use them directly for building vertices
             build_size_x, build_size_y, build_size_z = size_x, size_y, size_z
-            if self._coordinate_system == 'z_up':
-                build_size_y, build_size_z = size_z, size_y
 
             # Calculate the 8 absolute vertex coordinates for this voxel using its specific dimensions
             verts = [

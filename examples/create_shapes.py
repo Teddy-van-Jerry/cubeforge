@@ -94,19 +94,21 @@ except Exception as e:
     print(f"Caught unexpected error: {e}")
 
 
-# --- Example 6: Random Height Surface (Binary STL) ---
-print("\n--- Creating Example 6: Random Height Surface (Binary STL) ---")
+# --- Example 6: Random Height Surface Y-up (Binary STL) ---
+print("\n--- Creating Example 6: Random Height Surface (Y-up mode) ---")
 grid_size_x = 32
 grid_size_z = 32
 min_height = 1 # Minimum number of voxels vertically
 max_additional_height = 5 # Max random voxels to add on top
-voxel_dim = (1.0, 1.0, 1.0) # Use 1x1x1 voxels for stacking
+voxel_dim = (1.0, 0.8, 0.8) # Use 1x0.8x0.8 voxels for stacking
 
-model6 = cubeforge.VoxelModel(voxel_dimensions=voxel_dim)
+# Y-up mode: height varies along Y axis (default, mathematical convention)
+model6 = cubeforge.VoxelModel(voxel_dimensions=voxel_dim, coordinate_system='y_up')
 
 for x in range(grid_size_x):
     for z in range(grid_size_z):
         total_height = min_height + random.random() * max_additional_height
+        # In Y-up mode: dimensions are (x_size, y_size, z_size) where y is height
         # Add voxel using corner anchor. Coordinates are direct due to 1x1x1 dimension.
         model6.add_voxel(x * voxel_dim[0],
                          0,
@@ -114,9 +116,32 @@ for x in range(grid_size_x):
                          dimensions=(voxel_dim[0], total_height, voxel_dim[2]),
                          anchor=cubeforge.CubeAnchor.CORNER_NEG)
 
-output_filename6 = os.path.join(output_dir, "random_height_surface.stl") # Use output_dir
-model6.save_mesh(output_filename6, format='stl_binary', solid_name="RandomHeightSurface")
+output_filename6 = os.path.join(output_dir, "random_height_surface_y_up.stl")
+model6.save_mesh(output_filename6, format='stl_binary', solid_name="RandomHeightSurfaceYUp")
 print(f"Saved '{output_filename6}'")
+
+# --- Example 7: Random Height Surface Z-up (Binary STL) ---
+print("\n--- Creating Example 7: Random Height Surface (Z-up mode) ---")
+# Use same grid size and height parameters as Example 6
+
+# Z-up mode: height varies along Z axis (recommended for 3D printing)
+model7 = cubeforge.VoxelModel(voxel_dimensions=voxel_dim, coordinate_system='z_up')
+
+for x in range(grid_size_x):
+    for y in range(grid_size_z):  # Reuse grid_size_z as grid_size_y
+        total_height = min_height + random.random() * max_additional_height
+        # In Z-up mode: dimensions are (x_size, y_size, z_size) where z is height
+        # Add voxel using corner anchor. Coordinates are direct due to 1x1x1 dimension.
+        model7.add_voxel(x * voxel_dim[0],
+                         y * voxel_dim[1],
+                         0,
+                         dimensions=(voxel_dim[0], voxel_dim[1], total_height),
+                         anchor=cubeforge.CubeAnchor.CORNER_NEG)
+
+output_filename7 = os.path.join(output_dir, "random_height_surface_z_up.stl")
+model7.save_mesh(output_filename7, format='stl_binary', solid_name="RandomHeightSurfaceZUp")
+print(f"Saved '{output_filename7}'")
+print("NOTE: Compare both files in an STL viewer - Z-up will appear correctly oriented!")
 
 
 print("\nAll examples finished.")

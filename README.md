@@ -154,7 +154,7 @@ The [`examples/create_shapes.py`](examples/create_shapes.py) script demonstrates
 *   Overriding dimensions for individual voxels.
 *   Utilizing various [`CubeAnchor`](cubeforge/constants.py) options.
 *   Saving in both ASCII and Binary STL formats.
-*   Generating a surface with random heights.
+*   Generating random height surfaces in both Y-up and Z-up modes for comparison.
 
 ### Coordinate Systems Example
 The [`examples/coordinate_systems.py`](examples/coordinate_systems.py) script demonstrates:
