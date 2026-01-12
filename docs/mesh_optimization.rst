@@ -46,7 +46,7 @@ To disable optimization (not recommended except for debugging):
 Performance Comparison
 ----------------------
 
-File size reduction depends on the structure complexity:
+File size reduction depends on the structure complexity and height variation; values below are illustrative:
 
 +------------------------+----------------------+--------------------+--------------------+
 | Structure Type         | Unoptimized Size     | Optimized Size     | Reduction          |
@@ -55,10 +55,14 @@ File size reduction depends on the structure complexity:
 +------------------------+----------------------+--------------------+--------------------+
 | Solid cube (10×10×10)  | 480 KB               | 5 KB               | 99%                |
 +------------------------+----------------------+--------------------+--------------------+
-| Random height surface  | 500 KB               | 250 KB             | 50%                |
+| Random height surface  | 500 KB               | 200 KB             | 60%                |
 +------------------------+----------------------+--------------------+--------------------+
 | Complex irregular      | 300 KB               | 250 KB             | 17%                |
 +------------------------+----------------------+--------------------+--------------------+
+
+.. note::
+   Heightmap surfaces with per-column heights are optimized by voxelizing snapped heights and applying greedy meshing.
+   This can introduce T-junctions (open edges) where merged faces meet smaller faces, and some mesh validators may flag the result.
 
 When Optimization is Most Effective
 ------------------------------------
@@ -77,6 +81,7 @@ You may want to disable optimization if:
 1. **Individual faces needed:** For specialized post-processing
 2. **Debugging:** To see individual voxel geometry
 3. **Tiny models:** When the overhead isn't worth it (< 10 voxels)
+4. **Edge-manifold requirements:** Heightmap optimization can introduce T-junctions
 
 .. note::
    In 99% of cases, keep optimization enabled. It provides massive file size reductions with no visual or functional difference.

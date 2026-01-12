@@ -45,6 +45,7 @@ class VoxelModel:
         self._voxels = {}
         # Coordinate system: 'y_up' (default) or 'z_up'
         self._coordinate_system = coordinate_system
+        self._dimension_snap_warning_emitted = False
         logger.info(f"VoxelModel initialized with default voxel_dimensions={self.voxel_dimensions}, coordinate_system={coordinate_system}")
 
     def _swap_yz_if_needed(self, x, y, z):
@@ -113,6 +114,7 @@ class VoxelModel:
                                 CubeAnchor.CORNER_NEG.
             dimensions (tuple, optional): Custom dimensions (x_size, y_size, z_size) for this voxel.
                                           Always in (x, y, z) order regardless of coordinate system.
+                                          Dimensions are snapped to the model's voxel grid spacing.
                                           If None, the model's default dimensions are used.
         """
         # Swap coordinates if in Z-up mode
@@ -130,6 +132,16 @@ class VoxelModel:
             # Swap custom dimensions if in Z-up mode to convert to internal Y-up representation
             if self._coordinate_system == 'z_up':
                 voxel_dims = (voxel_dims[0], voxel_dims[2], voxel_dims[1])
+            voxel_dims, snapped = self._snap_dimensions(voxel_dims)
+            if snapped and not self._dimension_snap_warning_emitted:
+                grid_dim_x, grid_dim_y, grid_dim_z = self._grid_dimensions()
+                logger.warning(
+                    "Custom voxel dimensions snapped to grid spacing (%.6f, %.6f, %.6f).",
+                    grid_dim_x,
+                    grid_dim_y,
+                    grid_dim_z
+                )
+                self._dimension_snap_warning_emitted = True
 
         min_x, min_y, min_z = self._calculate_min_corner(x, y, z, anchor, voxel_dims)
 
@@ -171,7 +183,9 @@ class VoxelModel:
             anchor (CubeAnchor): The anchor point to use for all voxels added
                                 in this call.
             dimensions (tuple, optional): The dimensions to apply to all voxels
-                                          in this call. If None, defaults are used.
+                                          in this call. Dimensions are snapped
+                                          to the model's voxel grid spacing.
+                                          If None, defaults are used.
         """
         for x_coord, y_coord, z_coord in coordinates:
             self.add_voxel(x_coord, y_coord, z_coord, anchor, dimensions)
@@ -225,6 +239,166 @@ class VoxelModel:
         """Removes all voxels from the model."""
         self._voxels.clear()
         logger.info("VoxelModel cleared.")
+
+    def _grid_dimensions(self):
+        grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
+        if self._coordinate_system == 'z_up':
+            grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
+        return grid_dim_x, grid_dim_y, grid_dim_z
+
+    def _snap_to_grid(self, value, grid_dim, eps=1e-9):
+        layers = int(round(value / grid_dim))
+        if layers < 1:
+            layers = 1
+        snapped = layers * grid_dim
+        return snapped, abs(snapped - value) > eps
+
+    def _snap_dimensions(self, dimensions):
+        grid_dim_x, grid_dim_y, grid_dim_z = self._grid_dimensions()
+        snapped_dims = []
+        changed = False
+        for value, grid_dim in zip(dimensions, (grid_dim_x, grid_dim_y, grid_dim_z)):
+            snapped, did_change = self._snap_to_grid(value, grid_dim)
+            snapped_dims.append(snapped)
+            changed = changed or did_change
+        return tuple(snapped_dims), changed
+
+    def _voxel_min_corner(self, grid_coord):
+        grid_dim_x, grid_dim_y, grid_dim_z = self._grid_dimensions()
+        gx, gy, gz = grid_coord
+        return gx * grid_dim_x, gy * grid_dim_y, gz * grid_dim_z
+
+    def _can_use_greedy_meshing(self):
+        if not self._voxels:
+            return False
+        default_dims = self._grid_dimensions()
+        return all(dims == default_dims for dims in self._voxels.values())
+
+    def _append_face_rectangles(self, triangles, axis, direction, pos_on_axis, rectangles):
+        normal = [0, 0, 0]
+        normal[axis] = 1 if direction == 1 else -1
+        normal = tuple(normal)
+
+        output_normal = normal
+        swap_output = self._coordinate_system == 'z_up'
+        if swap_output:
+            output_normal = (normal[0], normal[2], normal[1])
+
+        for u0, v0, u1, v1 in rectangles:
+            u_length = u1 - u0
+            v_length = v1 - v0
+            if u_length <= 0 or v_length <= 0:
+                continue
+
+            verts = self._build_rect_vertices(axis, direction, pos_on_axis,
+                                              u0, v0, u_length, v_length)
+            if swap_output:
+                verts = [(v[0], v[2], v[1]) for v in verts]
+                triangles.append((output_normal, verts[0], verts[2], verts[1]))
+                triangles.append((output_normal, verts[0], verts[3], verts[2]))
+            else:
+                triangles.append((output_normal, verts[0], verts[1], verts[2]))
+                triangles.append((output_normal, verts[0], verts[2], verts[3]))
+
+    def _heightmap_mesh(self, optimize=False):
+        grid_dim_x, grid_dim_y, grid_dim_z = self._grid_dimensions()
+        eps = 1e-9
+
+        heights = {}
+        base_gy = None
+        for (gx, gy, gz), (size_x, size_y, size_z) in self._voxels.items():
+            if base_gy is None:
+                base_gy = gy
+            elif gy != base_gy:
+                return None
+
+            if abs(size_x - grid_dim_x) > eps or abs(size_z - grid_dim_z) > eps:
+                return None
+
+            key = (gx, gz)
+            if key in heights:
+                return None
+            heights[key] = size_y
+
+        if not heights:
+            return []
+
+        base_y = base_gy * grid_dim_y
+
+        snapped = False
+        quantized = {}
+        for key, height in heights.items():
+            layers = int(round(height / grid_dim_y))
+            if layers < 1:
+                layers = 1
+            quant_height = layers * grid_dim_y
+            if abs(quant_height - height) > eps:
+                snapped = True
+            quantized[key] = quant_height
+
+        if snapped:
+            logger.warning(
+                "Heightmap meshing snapped voxel heights to grid spacing %.6f to avoid partial-height artifacts.",
+                grid_dim_y
+            )
+
+        heights = quantized
+        triangles = []
+
+        unique_heights = sorted({0.0} | set(heights.values()))
+        cells = list(heights.items())
+
+        if optimize:
+            uniform_dims = self._grid_dimensions()
+            temp_model = VoxelModel(voxel_dimensions=self.voxel_dimensions, coordinate_system=self._coordinate_system)
+            temp_model._voxels = {}
+            for (gx, gz), height in heights.items():
+                if height <= eps:
+                    continue
+                layers = int(round(height / grid_dim_y))
+                for layer in range(layers):
+                    temp_model._voxels[(gx, base_gy + layer, gz)] = uniform_dims
+            return temp_model._greedy_mesh()
+
+        for i in range(len(unique_heights) - 1):
+            h0 = unique_heights[i]
+            h1 = unique_heights[i + 1]
+            if h1 <= h0 + eps:
+                continue
+            y0 = base_y + h0
+            y1 = base_y + h1
+
+            for (gx, gz), height in cells:
+                if height <= h0 + eps:
+                    continue
+                x0 = gx * grid_dim_x
+                x1 = x0 + grid_dim_x
+                z0 = gz * grid_dim_z
+                z1 = z0 + grid_dim_z
+
+                if heights.get((gx - 1, gz), 0.0) <= h0 + eps:
+                    rect = (y0, z0, y1, z1)
+                    self._append_face_rectangles(triangles, axis=0, direction=0, pos_on_axis=x0, rectangles=[rect])
+                if heights.get((gx + 1, gz), 0.0) <= h0 + eps:
+                    rect = (y0, z0, y1, z1)
+                    self._append_face_rectangles(triangles, axis=0, direction=1, pos_on_axis=x1, rectangles=[rect])
+                if heights.get((gx, gz - 1), 0.0) <= h0 + eps:
+                    rect = (x0, y0, x1, y1)
+                    self._append_face_rectangles(triangles, axis=2, direction=0, pos_on_axis=z0, rectangles=[rect])
+                if heights.get((gx, gz + 1), 0.0) <= h0 + eps:
+                    rect = (x0, y0, x1, y1)
+                    self._append_face_rectangles(triangles, axis=2, direction=1, pos_on_axis=z1, rectangles=[rect])
+
+                if not optimize:
+                    if height <= h1 + eps:
+                        rect_top = (z0, x0, z1, x1)
+                        self._append_face_rectangles(triangles, axis=1, direction=1, pos_on_axis=y1, rectangles=[rect_top])
+
+                    if i == 0:
+                        rect_bottom = (z0, x0, z1, x1)
+                        self._append_face_rectangles(triangles, axis=1, direction=0, pos_on_axis=y0, rectangles=[rect_bottom])
+
+        return triangles
 
     def _greedy_mesh(self):
         """
@@ -484,83 +658,95 @@ class VoxelModel:
         if not self._voxels:
             return []
 
-        # Use greedy meshing if optimize=True
-        if optimize:
+        use_greedy = optimize and self._can_use_greedy_meshing()
+        if use_greedy:
             return self._greedy_mesh()
+
+        heightmap_triangles = self._heightmap_mesh(optimize=optimize)
+        if heightmap_triangles is not None:
+            if optimize:
+                logger.warning("Using heightmap meshing for non-uniform voxel dimensions.")
+            return heightmap_triangles
+
+        if optimize:
+            logger.warning("Greedy meshing disabled for non-uniform voxel dimensions; using partial adjacency meshing.")
 
         logger.info(f"Generating mesh for {len(self._voxels)} voxels...")
         triangles = []
-        # Voxel dimensions are now fetched per-voxel, so size_x, etc. are defined inside the loop.
+        eps = 1e-9
 
-        # Define faces by normal, neighbor offset, and vertex indices (0-7)
-        # Vertex indices correspond to relative positions scaled by dimensions:
-        # 0: (0,0,0), 1: (Wx,0,0), 2: (0,Hy,0), 3: (Wx,Hy,0)
-        # 4: (0,0,Dz), 5: (Wx,0,Dz), 6: (0,Hy,Dz), 7: (Wx,Hy,Dz)
-        # Indices are ordered CCW when looking from outside the voxel.
         faces_data = [
-            # Normal, Neighbor Offset, Vertex Indices (Tri1: v0,v1,v2; Tri2: v0,v2,v3)
-            ((1, 0, 0), (1, 0, 0), [1, 3, 7, 5]), # +X face
-            ((-1, 0, 0), (-1, 0, 0), [4, 6, 2, 0]), # -X face
-            ((0, 1, 0), (0, 1, 0), [2, 6, 7, 3]), # +Y face
-            ((0, -1, 0), (0, -1, 0), [0, 1, 5, 4]), # -Y face
-            ((0, 0, 1), (0, 0, 1), [4, 5, 7, 6]), # +Z face
-            ((0, 0, -1), (0, 0, -1), [3, 1, 0, 2]), # -Z face
+            (0, 1, (1, 0, 0)),  # +X
+            (0, 0, (-1, 0, 0)), # -X
+            (1, 1, (0, 1, 0)),  # +Y
+            (1, 0, (0, -1, 0)), # -Y
+            (2, 1, (0, 0, 1)),  # +Z
+            (2, 0, (0, 0, -1)), # -Z
         ]
 
         processed_faces = 0
-        for (gx, gy, gz), (size_x, size_y, size_z) in self._voxels.items():
-            # Calculate the minimum corner based on grid coordinates and *default* dimensions
-            # In Z-up mode, swap the dimensions used for grid-to-world conversion
-            grid_dim_x, grid_dim_y, grid_dim_z = self.voxel_dimensions
-            if self._coordinate_system == 'z_up':
-                grid_dim_y, grid_dim_z = grid_dim_z, grid_dim_y
+        for grid_coord, voxel_dims in self._voxels.items():
+            min_cx, min_cy, min_cz = self._voxel_min_corner(grid_coord)
+            min_corner = (min_cx, min_cy, min_cz)
+            size_x, size_y, size_z = voxel_dims
+            sizes = (size_x, size_y, size_z)
 
-            min_cx = gx * grid_dim_x
-            min_cy = gy * grid_dim_y
-            min_cz = gz * grid_dim_z
-
-            # Dimensions are already stored in internal Y-up representation,
-            # so we use them directly for building vertices
-            build_size_x, build_size_y, build_size_z = size_x, size_y, size_z
-
-            # Calculate the 8 absolute vertex coordinates for this voxel using its specific dimensions
-            verts = [
-                (min_cx + (i % 2) * build_size_x, min_cy + ((i // 2) % 2) * build_size_y, min_cz + (i // 4) * build_size_z)
-                for i in range(8)
-            ]
-
-            # If in Z-up mode, swap Y and Z in vertices for output
-            if self._coordinate_system == 'z_up':
-                verts = [(v[0], v[2], v[1]) for v in verts]
-
-            for normal, offset, indices in faces_data:
+            gx, gy, gz = grid_coord
+            for axis, direction, offset in faces_data:
                 neighbor_coord = (gx + offset[0], gy + offset[1], gz + offset[2])
                 neighbor_dims = self._voxels.get(neighbor_coord)
 
-                # A face is exposed if there is no neighbor, OR if the neighbor
-                # has different dimensions, which would create a complex partial
-                # surface. For simplicity and correctness of the outer shell,
-                # we will generate the face in the latter case.
-                if not neighbor_dims or neighbor_dims != (size_x, size_y, size_z): # Exposed face
-                    processed_faces += 1
-                    # Get the four vertices for this face using the indices
-                    v0 = verts[indices[0]]
-                    v1 = verts[indices[1]]
-                    v2 = verts[indices[2]]
-                    v3 = verts[indices[3]]
-                    # Swap normal Y and Z if in Z-up mode
-                    output_normal = (normal[0], normal[2], normal[1]) if self._coordinate_system == 'z_up' else normal
+                pos_on_axis = min_corner[axis] + (sizes[axis] if direction == 1 else 0)
+                u_axis = (axis + 1) % 3
+                v_axis = (axis + 2) % 3
+                u_start = min_corner[u_axis]
+                v_start = min_corner[v_axis]
+                u_length = sizes[u_axis]
+                v_length = sizes[v_axis]
 
-                    # In Z-up mode, swapping Y and Z creates a reflection which reverses
-                    # handedness, so we must reverse the winding order to keep normals outward
-                    if self._coordinate_system == 'z_up':
-                        triangles.append((output_normal, v0, v2, v1)) # Triangle 1 (reversed)
-                        triangles.append((output_normal, v0, v3, v2)) # Triangle 2 (reversed)
-                    else:
-                        triangles.append((output_normal, v0, v1, v2)) # Triangle 1
-                        triangles.append((output_normal, v0, v2, v3)) # Triangle 2
+                rectangles = [(u_start, v_start, u_start + u_length, v_start + v_length)]
 
-        logger.info(f"Mesh generation complete. Found {processed_faces} exposed faces, resulting in {len(triangles)} triangles.")
+                if neighbor_dims:
+                    neighbor_min = self._voxel_min_corner(neighbor_coord)
+                    neighbor_sizes = neighbor_dims
+                    neighbor_plane = neighbor_min[axis] if direction == 1 else neighbor_min[axis] + neighbor_sizes[axis]
+
+                    if abs(pos_on_axis - neighbor_plane) <= eps:
+                        n_u_start = neighbor_min[u_axis]
+                        n_v_start = neighbor_min[v_axis]
+                        n_u_length = neighbor_sizes[u_axis]
+                        n_v_length = neighbor_sizes[v_axis]
+
+                        x0 = u_start
+                        x1 = u_start + u_length
+                        y0 = v_start
+                        y1 = v_start + v_length
+                        nx0 = n_u_start
+                        nx1 = n_u_start + n_u_length
+                        ny0 = n_v_start
+                        ny1 = n_v_start + n_v_length
+
+                        ix0 = max(x0, nx0)
+                        ix1 = min(x1, nx1)
+                        iy0 = max(y0, ny0)
+                        iy1 = min(y1, ny1)
+
+                        if ix1 > ix0 + eps and iy1 > iy0 + eps:
+                            rectangles = []
+                            if ix0 > x0 + eps:
+                                rectangles.append((x0, y0, ix0, y1))
+                            if ix1 < x1 - eps:
+                                rectangles.append((ix1, y0, x1, y1))
+                            if iy0 > y0 + eps:
+                                rectangles.append((ix0, y0, ix1, iy0))
+                            if iy1 < y1 - eps:
+                                rectangles.append((ix0, iy1, ix1, y1))
+
+                if rectangles:
+                    processed_faces += len(rectangles)
+                    self._append_face_rectangles(triangles, axis, direction, pos_on_axis, rectangles)
+
+        logger.info(f"Mesh generation complete. Emitted {processed_faces} face segments, resulting in {len(triangles)} triangles.")
         return triangles
 
     def save_mesh(self, filename, format='stl_binary', optimize=True, **kwargs):

@@ -78,12 +78,16 @@ You can override dimensions for individual voxels:
    # Add a 1x1x1 base cube
    model.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CENTER)
 
-   # Add a wide, flat 3x0.5x3 cube on top
+   # Add a wide 3x1x3 cube on top
    model.add_voxel(
        0, 0.5, 0,
        anchor=cubeforge.CubeAnchor.BOTTOM_CENTER,
-       dimensions=(3.0, 0.5, 3.0)
+       dimensions=(3.0, 1.0, 3.0)
    )
+
+.. note::
+   Custom dimensions are snapped to the model grid spacing (multiples of ``voxel_dimensions``).
+   Values that are not aligned are rounded to the nearest grid multiple.
 
 Saving to Different Formats
 ----------------------------

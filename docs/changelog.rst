@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Version 0.2.3 (2026-01-11)
+--------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Snapped custom per-voxel dimensions to the model grid spacing for consistent meshing
+* Quantized heightmap column heights to grid spacing to avoid partial-height adjacency
+
+Improvements
+~~~~~~~~~~~~
+
+* Enabled greedy meshing optimization for heightmap surfaces by voxelizing snapped columns
+* Added a one-time warning when custom dimensions are snapped to the grid
+
 Version 0.2.2 (2025-11-14)
 --------------------------
 

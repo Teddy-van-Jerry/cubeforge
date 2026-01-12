@@ -57,8 +57,8 @@ model.add_voxel(1, 1, 0)
 tower_model = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0))
 # Add a 1x1x1 base cube centered at (0,0,0)
 tower_model.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CENTER)
-# Stack a wide, flat 3x0.5x3 cube on top of it
-tower_model.add_voxel(0, 0.5, 0, anchor=cubeforge.CubeAnchor.BOTTOM_CENTER, dimensions=(3.0, 0.5, 3.0))
+# Stack a wide, low 3x1x3 cube on top of it
+tower_model.add_voxel(0, 0.5, 0, anchor=cubeforge.CubeAnchor.BOTTOM_CENTER, dimensions=(3.0, 1.0, 3.0))
 
 # Define output path
 output_dir = "output"
@@ -70,6 +70,9 @@ model.save_mesh(output_filename, format='stl_binary', solid_name="MyCustomShape"
 
 print(f"Saved mesh to {output_filename}")
 ```
+
+> [!NOTE]
+> Custom voxel dimensions are snapped to the model's grid spacing (multiples of `voxel_dimensions`). Non-aligned sizes are rounded to the nearest grid multiple.
 
 ## Coordinate Systems
 
@@ -187,8 +190,8 @@ The output STL files will be saved in the [`examples`](examples) directory.
 
 *   **[`cubeforge.VoxelModel`](cubeforge/model.py):** The main class for creating and managing the voxel model.
     *   [`__init__(self, voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='y_up')`](cubeforge/model.py): Initializes the model with default voxel dimensions and coordinate system. Use `coordinate_system='z_up'` for 3D printing.
-    *   [`add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds a single voxel, optionally with custom dimensions.
-    *   [`add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds multiple voxels, optionally with custom dimensions.
+*   [`add_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds a single voxel, optionally with custom dimensions snapped to the voxel grid spacing (multiples of `voxel_dimensions`).
+*   [`add_voxels(self, coordinates, anchor=CubeAnchor.CORNER_NEG, dimensions=None)`](cubeforge/model.py): Adds multiple voxels, optionally with custom dimensions snapped to the voxel grid spacing.
     *   [`remove_voxel(self, x, y, z, anchor=CubeAnchor.CORNER_NEG)`](cubeforge/model.py): Removes a voxel.
     *   [`clear(self)`](cubeforge/model.py): Removes all voxels.
     *   [`generate_mesh(self, optimize=True)`](cubeforge/model.py): Generates the triangle mesh data. Optimization enabled by default. Set `optimize=False` to disable.

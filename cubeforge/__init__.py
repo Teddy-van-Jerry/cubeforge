@@ -24,6 +24,6 @@ __all__ = [
 ]
 
 # Define package version
-__version__ = "0.2.2" # Fixed non-uniform dimension handling in Z-up mode
+__version__ = "0.2.3" # Heightmap snapping and optimization updates
 
 # logger.info(f"CubeForge package version {__version__} loaded.")

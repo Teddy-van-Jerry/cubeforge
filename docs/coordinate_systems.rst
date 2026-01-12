@@ -86,7 +86,7 @@ Here's a complete example of creating a vertical tower correctly oriented for 3D
 
    # Build a tower with varying cross-sections
    for z in range(10):
-       size = 3.0 - (z * 0.2)  # Taper as we go up
+       size = max(1.0, 3.0 - (z // 3))  # Taper in grid-aligned steps
        model.add_voxel(
            0, 0, z,
            dimensions=(size, size, 1.0),

@@ -3,6 +3,8 @@
 import logging
 import sys
 import os
+import random
+from collections import Counter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -15,6 +17,24 @@ import cubeforge
 # Define output directory
 output_dir = os.path.dirname(__file__)
 os.makedirs(output_dir, exist_ok=True)
+
+def analyze_mesh(triangles, tol=1e-6):
+    def q(v):
+        return (round(v[0] / tol) * tol, round(v[1] / tol) * tol, round(v[2] / tol) * tol)
+
+    edge_counts = Counter()
+    for _, v1, v2, v3 in triangles:
+        verts = [q(v1), q(v2), q(v3)]
+        edges = [(verts[0], verts[1]), (verts[1], verts[2]), (verts[2], verts[0])]
+        for a, b in edges:
+            if a <= b:
+                edge_counts[(a, b)] += 1
+            else:
+                edge_counts[(b, a)] += 1
+
+    open_edges = sum(1 for c in edge_counts.values() if c == 1)
+    non_manifold_edges = sum(1 for c in edge_counts.values() if c > 2)
+    return open_edges, non_manifold_edges
 
 print(f"Using cubeforge version: {cubeforge.__version__}")
 print(f"Outputting STL files to: {output_dir}\n")
@@ -201,6 +221,46 @@ print(f"Without optimization: {size_unopt7:,} bytes")
 print(f"With optimization:    {size_opt7:,} bytes")
 print(f"Reduction:            {(1 - size_opt7/size_unopt7)*100:.1f}% ({size_unopt7/size_opt7:.1f}x smaller)")
 
+# Example 8: Random height surface (non-uniform Z)
+print("\n--- Example 8: Random Height Surface Z-up (non-uniform Z) ---")
+random.seed(42)
+grid_size = 32
+min_height = 1.0
+max_additional_height = 5.0
+voxel_dim = (1.0, 0.8, 0.8)
+
+model8 = cubeforge.VoxelModel(voxel_dimensions=voxel_dim, coordinate_system='z_up')
+for x in range(grid_size):
+    for y in range(grid_size):
+        total_height = min_height + random.random() * max_additional_height
+        model8.add_voxel(
+            x * voxel_dim[0],
+            y * voxel_dim[1],
+            0,
+            dimensions=(voxel_dim[0], voxel_dim[1], total_height),
+            anchor=cubeforge.CubeAnchor.CORNER_NEG
+        )
+
+triangles_unopt8 = model8.generate_mesh(optimize=False)
+file_unopt8 = os.path.join(output_dir, "random_height_surface_z_up_unoptimized.stl")
+model8.save_mesh(file_unopt8, format='stl_binary', optimize=False)
+size_unopt8 = os.path.getsize(file_unopt8)
+
+triangles_opt8 = model8.generate_mesh(optimize=True)
+file_opt8 = os.path.join(output_dir, "random_height_surface_z_up_optimized.stl")
+model8.save_mesh(file_opt8, format='stl_binary', optimize=True)
+size_opt8 = os.path.getsize(file_opt8)
+
+open_edges_unopt8, non_manifold_unopt8 = analyze_mesh(triangles_unopt8)
+open_edges_opt8, non_manifold_opt8 = analyze_mesh(triangles_opt8)
+
+print(f"Without optimization: {size_unopt8:,} bytes")
+print(f"With optimization:    {size_opt8:,} bytes")
+print(f"Reduction:            {(1 - size_opt8/size_unopt8)*100:.1f}% ({size_unopt8/size_opt8:.1f}x smaller)")
+print("Mesh topology check (edge counts):")
+print(f"Unoptimized: triangles={len(triangles_unopt8)}, open_edges={open_edges_unopt8}, non_manifold_edges={non_manifold_unopt8}")
+print(f"Optimized:   triangles={len(triangles_opt8)}, open_edges={open_edges_opt8}, non_manifold_edges={non_manifold_opt8}")
+
 print("\n" + "=" * 70)
 print("SUMMARY")
 print("=" * 70)
@@ -216,6 +276,7 @@ TEST RESULTS ANALYSIS:
 * L-shapes & stairs: 60-80% reduction (very good)
 * Towers with holes: 50-70% reduction (good)
 * Checkerboard: Minimal reduction (expected worst case)
+* Random height surfaces: moderate reduction; optimized mode can introduce T-junctions (open edges) and non-manifold edges when heights vary per voxel
 
 The optimization is lossless - geometry is identical, just more efficient!
 

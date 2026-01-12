@@ -74,13 +74,13 @@ print("In Z-up mode, dimensions are (width, depth, height)")
 
 model_custom = cubeforge.VoxelModel(voxel_dimensions=(1.0, 1.0, 1.0), coordinate_system='z_up')
 
-# Create a base (wide and shallow)
+# Create a base (wide and low)
 model_custom.add_voxel(0, 0, 0,
                       anchor=cubeforge.CubeAnchor.CORNER_NEG,
-                      dimensions=(3.0, 3.0, 0.5))  # width, depth, height
+                      dimensions=(3.0, 3.0, 1.0))  # width, depth, height
 
 # Stack a narrow tall column on top
-model_custom.add_voxel(1.5, 1.5, 0.5,
+model_custom.add_voxel(1.5, 1.5, 1.0,
                       anchor=cubeforge.CubeAnchor.BOTTOM_CENTER,
                       dimensions=(1.0, 1.0, 3.0))  # width, depth, height
 

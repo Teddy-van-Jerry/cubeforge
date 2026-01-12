@@ -31,12 +31,15 @@ Create a structure with non-cubic voxels:
    # Define non-uniform dimensions (width=2, height=1, depth=3)
    model = cubeforge.VoxelModel(voxel_dimensions=(2.0, 1.0, 3.0))
 
-   # Add voxels that will snap to the grid
+   # Add voxels aligned to the grid
    model.add_voxel(0, 0, 0, anchor=cubeforge.CubeAnchor.CORNER_NEG)
    model.add_voxel(2, 0, 0, anchor=cubeforge.CubeAnchor.CORNER_NEG)
    model.add_voxel(0, 1, 0, anchor=cubeforge.CubeAnchor.CORNER_NEG)
 
    model.save_mesh("non_uniform.stl", format='stl_binary')
+
+.. note::
+   Per-voxel dimensions are snapped to the model grid spacing (multiples of ``voxel_dimensions``).
 
 Anchor Point Demonstration
 ---------------------------
@@ -78,8 +81,9 @@ Create a surface with random heights using Y-up mode:
 
    for x in range(grid_size):
        for z in range(grid_size):
-           # Random height between 1 and 6
-           height = 1.0 + random.random() * 5.0
+           # Random height between 1 and 6 voxel layers
+           height_layers = random.randint(1, 6)
+           height = voxel_dim[1] * height_layers
 
            model.add_voxel(
                x * voxel_dim[0],
@@ -111,8 +115,9 @@ Same structure in Z-up mode for correct 3D printing orientation:
 
    for x in range(grid_size):
        for y in range(grid_size):
-           # Random height between 1 and 6
-           height = 1.0 + random.random() * 5.0
+           # Random height between 1 and 6 voxel layers
+           height_layers = random.randint(1, 6)
+           height = voxel_dim[2] * height_layers
 
            model.add_voxel(
                x * voxel_dim[0],
